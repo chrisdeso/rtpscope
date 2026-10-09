@@ -1,0 +1,25 @@
+name: Sync milestones
+on: workflow_dispatch
+permissions:
+  issues: write
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const wanted = [
+              ["Proposal", "2026-09-30", "Verify basic network traffic visibility"],
+              ["Team kickoff call", "2026-10-09", "Roles, repo access, dev env, standup cadence"],
+              ["Progress report", "2026-10-28", "Live bitrate/loss/jitter terminal output; audio/video timing estimates"],
+              ["Final demo window opens", "2026-11-23", "Pixel-path quality, fault attribution, overlay HUD"],
+              ["Final submission", "2026-12-05", "Demo, CSV report generator, written documentation"],
+            ];
+            const {owner, repo} = context.repo;
+            const have = await github.paginate(github.rest.issues.listMilestones, {owner, repo, state: "all"});
+            for (const [title, d, description] of wanted) {
+              if (have.some(m => m.title === title)) continue;
+              await github.rest.issues.createMilestone({owner, repo, title, description,
+                due_on: `${d}T23:59:59Z`});
+            }

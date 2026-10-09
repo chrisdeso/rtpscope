@@ -1,0 +1,38 @@
+name: Notify Discord
+# Needs repo secret DISCORD_WEBHOOK_URL (Discord channel → Integrations → Webhooks).
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+  pull_request:
+    types: [opened, ready_for_review, closed]
+  pull_request_review:
+    types: [submitted]
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    if: >-
+      github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'failure'
+    steps:
+      - name: Post to Discord
+        env:
+          WEBHOOK: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          EVENT: ${{ github.event_name }}
+          ACTION: ${{ github.event.action }}
+          ACTOR: ${{ github.actor }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          PR_MERGED: ${{ github.event.pull_request.merged }}
+          REVIEW_STATE: ${{ github.event.review.state }}
+          RUN_NAME: ${{ github.event.workflow_run.head_branch }}
+          RUN_URL: ${{ github.event.workflow_run.html_url }}
+        run: |
+          [ -z "$WEBHOOK" ] && { echo "no webhook secret; skipping"; exit 0; }
+          case "$EVENT" in
+            workflow_run) msg="CI failed on \`$RUN_NAME\` — $RUN_URL" ;;
+            pull_request_review) msg="$ACTOR reviewed ($REVIEW_STATE): $PR_TITLE — $PR_URL" ;;
+            *) [ "$PR_MERGED" = true ] && ACTION=merged
+               msg="PR $ACTION by $ACTOR: $PR_TITLE — $PR_URL" ;;
+          esac
+          jq -n --arg c "$msg" '{content:$c, allowed_mentions:{parse:[]}}' |
+            curl -fsS -H 'Content-Type: application/json' -d @- "$WEBHOOK"

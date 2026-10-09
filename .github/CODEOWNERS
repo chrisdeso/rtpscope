@@ -1,0 +1,4 @@
+# Default owner. Add per-area lines as members' GitHub logins are known, e.g.:
+#   /src/rtpscope/wire/   @login
+#   /src/rtpscope/pixel/  @login
+*  @chrisdeso
