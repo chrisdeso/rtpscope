@@ -1,0 +1,34 @@
+# rtpscope shared dependencies (Python >= 3.11)
+# Install: pip install -r requirements.txt
+
+# media: encode/decode, frames, audio
+av>=12                  # app: Opus/VP8 decode; sender encode
+numpy>=1.26             # everyone: frames, audio, stats
+sounddevice>=0.4.6      # app: audio playback (A/V master clock); pixel: audio capture
+opencv-python>=4.9      # app: video window; pixel: barcode/flash detection; HUD: overlay
+                        # do NOT also install opencv-python-headless / opencv-contrib-python
+
+# wire path
+scapy>=2.5              # live RTP/RTCP capture (Windows needs Npcap + admin)
+dpkt>=1.9.8             # fast offline pcap parsing
+
+# pixel path
+mss>=9                  # screen capture of the rendered call
+scikit-image>=0.22      # SSIM/PSNR frame quality
+
+# correlation, HUD, reports
+pandas>=2.1             # join wire + pixel + receiver timelines; CSV report
+matplotlib>=3.8         # plots for progress report and final docs
+rich>=13                # live terminal output (bitrate/loss/jitter)
+
+# test harness
+pyyaml>=6               # experiment/run configs
+
+# dev
+pytest>=8
+ruff>=0.6
+hypothesis>=6
+
+# WebRTC
+aiortc>=1.9             # app: peer connection, ICE/DTLS/SRTP (pulls in aioice, pylibsrtp, cryptography)
+aiohttp>=3.9            # app: signaling server for the SDP offer/answer exchange
