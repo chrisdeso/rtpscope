@@ -1,0 +1,6 @@
+# Caddyfile --> https for the call page + websocket, cert comes from let's encrypt on its own
+# setup.sh swaps __DOMAIN__ and copies this to /etc/caddy/Caddyfile
+__DOMAIN__ {
+	encode gzip
+	reverse_proxy 127.0.0.1:8087
+}

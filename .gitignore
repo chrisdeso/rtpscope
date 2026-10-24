@@ -1,12 +1,45 @@
+# python
 .venv/
 __pycache__/
 *.egg-info/
+build/
+dist/
 .pytest_cache/
 .ruff_cache/
+.coverage
+htmlcov/
+
+# secrets --> never commit real values, copy the .example and fill it in
 .env
+.env.*
+*.env
+!.env.example
+!*.env.example
+
+# tls certs for lan https --> generate them, see the readme
+*.pem
+*.key
+*.crt
+certs/*
+!certs/.gitkeep
+
+# experiment output (captures, recordings, runs)
 runs/
 *.pcap
 *.pcapng
 *.mp4
 *.mkv
 *.webm
+
+# node (browser e2e scripts)
+node_modules/
+
+# editors / os
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# claude code personal files
+CLAUDE.local.md
+.claude/settings.local.json

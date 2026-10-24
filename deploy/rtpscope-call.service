@@ -1,0 +1,26 @@
+# rtpscope-call.service --> keeps the call server up, caddy sits in front of it
+# setup.sh swaps __REPO_DIR__ and copies this to /etc/systemd/system/
+[Unit]
+Description=rtpscope call server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+# STUN_URL / TURN_URL / TURN_SECRET, written once by setup.sh
+EnvironmentFile=/etc/rtpscope/call.env
+Environment=PYTHONUNBUFFERED=1 PYTHONDONTWRITEBYTECODE=1
+WorkingDirectory=__REPO_DIR__
+# only on localhost, the outside world goes through caddy
+ExecStart=__REPO_DIR__/.venv/bin/python -m rtpscope.call.server --host 127.0.0.1 --port 8087
+Restart=on-failure
+RestartSec=2
+
+# throwaway user, read-only filesystem
+DynamicUser=yes
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+
+[Install]
+WantedBy=multi-user.target
