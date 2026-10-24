@@ -22,6 +22,16 @@ Then open `https://call.example.com`. The first load can take ~30 s while Caddy 
 ## 3. Check TURN works
 Open `https://call.example.com/?room=test&relay=1` on two devices. `relay=1` forces all media through coturn, so if video shows up, TURN works. The room pill says "relay only".
 
+## TURN on the LAN, no VPS (dev / demos)
+Phones on Wi-Fi often can't reach a laptop directly: many access points block client-to-client multicast, so the browsers' `.local` addresses don't resolve. A TURN server on the machine running the call server fixes that:
+```sh
+deploy/dev-turn.sh                  # coturn in docker on this machine's LAN IP, prints the server command
+# if this machine runs ufw, let the LAN reach coturn:
+sudo ufw allow from 192.168.1.0/24 to any port 3478
+sudo ufw allow from 192.168.1.0/24 to any port 49160:49260 proto udp
+```
+Run the printed command (it needs the LAN cert from `certs/README.md`), then open `https://<lan-ip>:8087` on each device. Add `&relay=1` to check TURN is really used. Stop it with `docker stop rtpscope-turn`. Unlike `turnserver.conf`, this allows relaying to private addresses, so keep it on the LAN.
+
 ## Updating
 ```sh
 cd /opt/rtpscope && git pull && systemctl restart rtpscope-call
@@ -61,4 +71,4 @@ The call server itself only listens on `127.0.0.1:8087` behind Caddy.
 | `rtpscope-call.service` | `/etc/systemd/system/` |
 | generated (shape in `call.env.example`) | `/etc/rtpscope/call.env` (mode 600): `STUN_URL`, `TURN_URL`, `TURN_SECRET` |
 
-Notes: there's no auth on rooms, so anyone with the URL can join. Use non-obvious room names. Relayed calls send their media through the VPS and count against the plan's traffic.
+Notes: there's no auth on rooms, and the lobby's "Active meetings" list (`/rooms`) shows every live room and who's in it to anyone who opens the page. Treat the site itself as the thing to keep private. Relayed calls send their media through the VPS and count against the plan's traffic.

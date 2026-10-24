@@ -22,6 +22,8 @@ Browser-to-browser WebRTC call (mesh, up to 4 per room) with a small aiohttp sig
 ```
 - No camera? Tick "Use a test pattern" (it's also used automatically if the camera fails).
 - From another machine on the LAN the camera needs HTTPS: make a throwaway cert as in [`certs/README.md`](certs/README.md), then open `https://<ip>:8087`.
+- Phones on Wi-Fi not connecting? Run a local TURN server with `deploy/dev-turn.sh` (see "TURN on the LAN" in [`deploy/README.md`](deploy/README.md)).
+- The lobby lists active meetings (from `GET /rooms`); click one to join it.
 - Hosted version on a VPS (HTTPS + STUN/TURN): see [`deploy/README.md`](deploy/README.md). Env settings (`STUN_URL`, `TURN_URL`, `TURN_SECRET`) are documented in [`deploy/call.env.example`](deploy/call.env.example).
 
 ## Workflow
