@@ -52,6 +52,6 @@ The call server itself only listens on `127.0.0.1:8087` behind Caddy.
 | `Caddyfile` | `/etc/caddy/Caddyfile` |
 | `turnserver.conf` | `/etc/turnserver.conf` (mode 640, has the secret) |
 | `rtpscope-call.service` | `/etc/systemd/system/` |
-| generated | `/etc/rtpscope/call.env` (mode 600): `STUN_URL`, `TURN_URL`, `TURN_SECRET` |
+| generated (shape in `call.env.example`) | `/etc/rtpscope/call.env` (mode 600): `STUN_URL`, `TURN_URL`, `TURN_SECRET` |
 
 Notes: there's no auth on rooms, so anyone with the URL can join. Use non-obvious room names. Relayed calls send their media through the VPS and count against the plan's traffic.

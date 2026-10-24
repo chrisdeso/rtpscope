@@ -21,13 +21,8 @@ Browser-to-browser WebRTC call (mesh, up to 4 per room) with a small aiohttp sig
 .venv/bin/python -m rtpscope.call.server   # http://localhost:8087, open two tabs, join the same room
 ```
 - No camera? Tick "Use a test pattern" (it's also used automatically if the camera fails).
-- From another machine on the LAN the camera needs HTTPS, so use a throwaway cert (`certs/` and `*.pem` are gitignored):
-  ```sh
-  mkdir -p certs && openssl req -x509 -newkey rsa:2048 -nodes -days 30 -subj /CN=rtpscope \
-    -keyout certs/key.pem -out certs/cert.pem
-  .venv/bin/python -m rtpscope.call.server --cert certs/cert.pem --key certs/key.pem   # https://<ip>:8087
-  ```
-- Hosted version on a VPS (HTTPS + STUN/TURN): see [`deploy/README.md`](deploy/README.md).
+- From another machine on the LAN the camera needs HTTPS: make a throwaway cert as in [`certs/README.md`](certs/README.md), then open `https://<ip>:8087`.
+- Hosted version on a VPS (HTTPS + STUN/TURN): see [`deploy/README.md`](deploy/README.md). Env settings (`STUN_URL`, `TURN_URL`, `TURN_SECRET`) are documented in [`deploy/call.env.example`](deploy/call.env.example).
 
 ## Workflow
 - `main` is always demoable; branch as `<area>/<short-desc>` (e.g. `wire/seq-tracker`).
