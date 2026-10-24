@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>rtpscope call</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='6' fill='none' stroke='%233fb950' stroke-width='2'/%3E%3Ccircle cx='8' cy='8' r='2.5' fill='%233fb950'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header>
+    <div class="brand"><span class="logo"></span>rtpscope <span class="muted">call</span></div>
+    <div class="status">
+      <span id="room-pill" class="pill" hidden></span>
+      <span id="conn" class="dot" title="server: offline"></span>
+    </div>
+  </header>
+
+  <!-- join: room + name, room comes from ?room= so the link can be shared -->
+  <main id="lobby">
+    <form id="join-form" class="card">
+      <h1>Join a call</h1>
+      <p class="muted">Anyone who opens the same room joins the same call (up to 4).</p>
+      <label>Room <input id="room" required maxlength="64" autocomplete="off" placeholder="lab"></label>
+      <label>Name <input id="name" required maxlength="32" autocomplete="off" placeholder="your name"></label>
+      <label class="check"><input id="pattern" type="checkbox"> Use a test pattern instead of the camera</label>
+      <button type="submit" class="primary">Join</button>
+      <p id="join-error" class="error" hidden></p>
+    </form>
+  </main>
+
+  <!-- call: one tile per person -->
+  <main id="call" hidden>
+    <section id="grid"></section>
+    <nav class="controls">
+      <button id="mic" title="mute / unmute">Mic</button>
+      <button id="cam" title="camera on / off">Cam</button>
+      <button id="copy" title="copy invite link">Copy link</button>
+      <button id="leave" class="danger">Leave</button>
+    </nav>
+  </main>
+
+  <template id="tile-template">
+    <figure class="tile">
+      <video autoplay playsinline></video>
+      <figcaption><span class="dot"></span><span class="name"></span></figcaption>
+    </figure>
+  </template>
+
+  <div id="toast" hidden></div>
+  <script type="module" src="/static/call.js"></script>
+</body>
+</html>
