@@ -1,9 +1,13 @@
 # server.js --> Handles context for who is where
 # uuid for matching clients to "rooms"
 import argparse
+import base64
+import hashlib
+import hmac
 import json
 import os
 import ssl
+import time
 import uuid
 from contextlib import suppress
 from pathlib import Path
@@ -14,6 +18,8 @@ from aiohttp import WSMsgType, web
 STATIC = Path(__file__).parent / "static"
 # mesh call --> everyone connects to everyone, so keep rooms small
 MAX_PEERS = 4
+# how long a turn login handed out on join stays good for
+TURN_TTL = 12 * 60 * 60
 
 # stun/turn settings --> handed to every browser when it joins
 ICE = web.AppKey("ice", dict)
@@ -53,9 +59,17 @@ async def broadcast(room, message):
         await send(peer, message)
 
 
-# ice servers for one browser --> stun only for now
+# ice servers for one browser --> stun as is, turn gets a short lived login.
+# coturn use-auth-secret: username is "expiry:id", password is hmac(secret, username)
+# so nothing has to be stored and a leaked login dies on its own
 def ice_servers(ice, peer_id):
-    return [{"urls": url} for url in ice.get("stun", [])]
+    servers = [{"urls": url} for url in ice.get("stun", [])]
+    if ice.get("turn") and ice.get("turn_secret"):
+        username = f"{int(time.time()) + TURN_TTL}:{peer_id}"
+        digest = hmac.new(ice["turn_secret"].encode(), username.encode(), hashlib.sha1).digest()
+        password = base64.b64encode(digest).decode()
+        servers.append({"urls": ice["turn"], "username": username, "credential": password})
+    return servers
 
 
 # websocket handler
@@ -121,9 +135,9 @@ async def websocket_handler(request):
 
 
 # build server app without starting it
-def create_call_app(stun=None):
+def create_call_app(stun=None, turn=None, turn_secret=None):
     app = web.Application()
-    app[ICE] = {"stun": stun or []}
+    app[ICE] = {"stun": stun or [], "turn": turn or [], "turn_secret": turn_secret}
     app.router.add_get("/", index)
     app.router.add_get("/health", health)
     # register websocket connection
@@ -144,15 +158,21 @@ def main():
     # camera only works on https or localhost --> cert for joining from another machine
     parser.add_argument("--cert", help="TLS cert (pem)")
     parser.add_argument("--key", help="TLS private key (pem)")
+    # stun/turn urls come from flags or env (the vps sets them in /etc/rtpscope/call.env)
     parser.add_argument("--stun", action="append", default=env_list("STUN_URL"))
+    parser.add_argument("--turn", action="append", default=env_list("TURN_URL"))
     args = parser.parse_args()
+    # secret only from env so it doesn't show up in ps
+    turn_secret = os.environ.get("TURN_SECRET")
+    if args.turn and not turn_secret:
+        parser.error("--turn needs TURN_SECRET set in the environment")
 
     ssl_context = None
     if args.cert:
         ssl_context = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
         ssl_context.load_cert_chain(args.cert, args.key)
 
-    app = create_call_app(stun=args.stun)
+    app = create_call_app(stun=args.stun, turn=args.turn, turn_secret=turn_secret)
     web.run_app(app, host=args.host, port=args.port, ssl_context=ssl_context)
 
 
