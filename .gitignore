@@ -10,3 +10,5 @@ runs/
 *.mp4
 *.mkv
 *.webm
+*.pem
+certs/
