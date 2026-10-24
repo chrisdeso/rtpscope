@@ -4,6 +4,9 @@
 const VIDEO = { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 } };
 
 const $ = (id) => document.getElementById(id);
+const params = new URLSearchParams(location.search);
+// ?relay=1 --> force everything through turn, for checking the vps relay actually works
+const RELAY_ONLY = params.has("relay");
 
 // peer id --> { name, pc, tile }
 const peers = new Map();
@@ -143,7 +146,7 @@ async function onSignal(from, data) {
 // ---- peer connections
 
 function connect(id, name) {
-  const pc = new RTCPeerConnection({ iceServers });
+  const pc = new RTCPeerConnection({ iceServers, iceTransportPolicy: RELAY_ONLY ? "relay" : "all" });
   for (const track of localStream.getTracks()) pc.addTrack(track, localStream);
 
   const tile = addTile(name, null);
@@ -212,10 +215,10 @@ function addTile(name, stream, { local = false, pattern = false } = {}) {
 }
 
 function showCall(room) {
-  history.replaceState(null, "", `?room=${encodeURIComponent(room)}`);
+  history.replaceState(null, "", `?room=${encodeURIComponent(room)}${RELAY_ONLY ? "&relay=1" : ""}`);
   $("lobby").hidden = true;
   $("call").hidden = false;
-  $("room-pill").textContent = `room ${room}`;
+  $("room-pill").textContent = `room ${room}${RELAY_ONLY ? " · relay only" : ""}`;
   $("room-pill").hidden = false;
 }
 
@@ -248,7 +251,6 @@ function toggle(kind, button) {
 
 // ---- wiring
 
-const params = new URLSearchParams(location.search);
 $("room").value = params.get("room") ?? "";
 try {
   $("name").value = localStorage.getItem("rtpscope.name") ?? "";
