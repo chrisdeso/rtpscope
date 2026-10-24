@@ -10,8 +10,10 @@ Wire path · Pixel path · Conferencing app · Correlation + HUD · Test harness
 ## Development
 ```sh
 python3 -m venv .venv && .venv/bin/pip install -e '.[dev]'
-.venv/bin/pytest -q && .venv/bin/ruff check .
+.venv/bin/pre-commit install   # ruff lint + format on every commit
+.venv/bin/pytest -q && .venv/bin/ruff check . && .venv/bin/ruff format --check .
 ```
+Editor support: `basedpyright` (completion, types) and `ruff` (lint, format) both ship in the dev extras and speak LSP; `pyproject.toml` points them at `.venv`. Point your editor's LSP client at `.venv/bin/basedpyright-langserver` and `.venv/bin/ruff server`.
 
 ## Workflow
 - `main` is always demoable; branch as `<area>/<short-desc>` (e.g. `wire/seq-tracker`).

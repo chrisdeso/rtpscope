@@ -3,10 +3,10 @@ name = "rtpscope"
 version = "0.0.1"
 description = "Attribute WebRTC call degradation to the wire path or the pixel path"
 requires-python = ">=3.11"
-dependencies = []
+dependencies = ["aiohttp>=3.9"]
 
 [project.optional-dependencies]
-dev = ["pytest>=8", "ruff>=0.6"]
+dev = ["pytest>=8", "ruff>=0.6", "basedpyright>=1.20", "pre-commit>=4"]
 
 [build-system]
 requires = ["setuptools>=68"]
@@ -20,3 +20,20 @@ testpaths = ["tests"]
 
 [tool.ruff]
 line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM", "RUF"]
+
+[tool.basedpyright]
+# Lets the LSP (nvim, VS Code, etc.) resolve imports from the project venv.
+venvPath = "."
+venv = ".venv"
+include = ["src", "tests"]
+typeCheckingMode = "standard"
+# Handlers like aiohttp's must accept `request` even when unused.
+reportUnusedParameter = false
+# Ruff already reports these (F401/F841/F821) with quick-fixes; avoid duplicates.
+reportUnusedImport = false
+reportUnusedVariable = false
+reportUndefinedVariable = false
