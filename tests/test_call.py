@@ -90,6 +90,29 @@ def test_first_message_must_be_join():
     run(test)
 
 
+def test_active_rooms_listed():
+    async def test(client):
+        assert await (await client.get("/rooms")).json() == []
+        a, _ = await join(client, room="lab", name="alice")
+        b, _ = await join(client, room="lab", name="bob")
+        c, _ = await join(client, room="other", name="carol")
+
+        listed = await (await client.get("/rooms")).json()
+        assert [r["room"] for r in listed] == ["lab", "other"]
+        assert listed[0]["peers"] == ["alice", "bob"]
+        assert listed[0]["max"] == MAX_PEERS
+        assert listed[0]["started"] <= time.time()
+
+        for ws in (a, b, c):
+            await ws.close()
+        # give the server a beat to run the handlers' cleanup
+        await asyncio.sleep(0.05)
+        assert await (await client.get("/rooms")).json() == []
+
+    run(test)
+    assert server.started == {}
+
+
 def test_no_ice_servers_by_default():
     async def test(client):
         a, welcome = await join(client)

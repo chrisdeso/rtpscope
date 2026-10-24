@@ -37,10 +37,29 @@ class PeerModel:
 
 # room name client model id ->
 rooms: dict[str, dict[str, PeerModel]] = {}
+# room name --> when it started, for the lobby list
+started: dict[str, float] = {}
 
 
 async def index(request):
     return web.FileResponse(STATIC / "index.html")
+
+
+# active meetings for the lobby --> who's in which room right now, oldest first
+async def list_rooms(request):
+    active = [
+        {
+            "room": name,
+            "peers": [p.name for p in room.values()],
+            "max": MAX_PEERS,
+            "started": started.get(name),
+        }
+        for name, room in rooms.items()
+        # skip rooms mid-join with nobody fully in yet
+        if room
+    ]
+    active.sort(key=lambda r: r["started"] or 0)
+    return web.json_response(active)
 
 
 async def health(request):
@@ -100,20 +119,22 @@ async def websocket_handler(request):
     while peer.id in room:
         peer.id = uuid.uuid4().hex[:4]
 
-    # new peer gets who's already here --> it makes the offers, everyone else just answers
-    await ws.send_json(
-        {
-            "type": "welcome",
-            "id": peer.id,
-            "peers": [{"id": p.id, "name": p.name} for p in room.values()],
-            "iceServers": ice_servers(request.app[ICE], peer.id),
-        }
-    )
-    await broadcast(room, {"type": "peer-joined", "id": peer.id, "name": peer.name})
-    room[peer.id] = peer
-    print(f"{peer.name} ({peer.id}) joined {room_name} [{len(room)}/{MAX_PEERS}]")
-
+    started.setdefault(room_name, time.time())
+    # everything from here is in the try --> if they drop mid-join the room still gets cleaned up
     try:
+        # new peer gets who's already here --> it makes the offers, everyone else just answers
+        await ws.send_json(
+            {
+                "type": "welcome",
+                "id": peer.id,
+                "peers": [{"id": p.id, "name": p.name} for p in room.values()],
+                "iceServers": ice_servers(request.app[ICE], peer.id),
+            }
+        )
+        await broadcast(room, {"type": "peer-joined", "id": peer.id, "name": peer.name})
+        room[peer.id] = peer
+        print(f"{peer.name} ({peer.id}) joined {room_name} [{len(room)}/{MAX_PEERS}]")
+
         async for message in ws:
             if message.type != WSMsgType.TEXT:
                 continue
@@ -129,6 +150,7 @@ async def websocket_handler(request):
         room.pop(peer.id, None)
         if not room:
             rooms.pop(room_name, None)
+            started.pop(room_name, None)
         await broadcast(room, {"type": "peer-left", "id": peer.id})
         print(f"{peer.name} ({peer.id}) left {room_name}")
     return ws
@@ -140,6 +162,7 @@ def create_call_app(stun=None, turn=None, turn_secret=None):
     app[ICE] = {"stun": stun or [], "turn": turn or [], "turn_secret": turn_secret}
     app.router.add_get("/", index)
     app.router.add_get("/health", health)
+    app.router.add_get("/rooms", list_rooms)
     # register websocket connection
     app.router.add_get("/ws", websocket_handler)
     app.router.add_static("/static", STATIC)
