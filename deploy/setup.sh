@@ -31,17 +31,20 @@ python3 -m venv "$REPO_DIR/.venv"
 
 echo "--> $ENV_FILE"
 mkdir -p "$(dirname "$ENV_FILE")"
-if [[ ! -f $ENV_FILE ]]; then
-  (
-    umask 077
-    cat >"$ENV_FILE" <<EOF
+# urls follow DOMAIN every run (e.g. moving off sslip.io), only the secret is kept
+TURN_SECRET=""
+if [[ -f $ENV_FILE ]]; then
+  TURN_SECRET="$(grep '^TURN_SECRET=' "$ENV_FILE" | cut -d= -f2-)"
+fi
+TURN_SECRET="${TURN_SECRET:-$(openssl rand -hex 32)}"
+(
+  umask 077
+  cat >"$ENV_FILE" <<EOF
 STUN_URL=stun:$DOMAIN:3478
 TURN_URL=turn:$DOMAIN:3478?transport=udp,turn:$DOMAIN:3478?transport=tcp
-TURN_SECRET=$(openssl rand -hex 32)
+TURN_SECRET=$TURN_SECRET
 EOF
-  )
-fi
-TURN_SECRET="$(grep '^TURN_SECRET=' "$ENV_FILE" | cut -d= -f2-)"
+)
 
 echo "--> coturn"
 sed -e "s|__DOMAIN__|$DOMAIN|g" -e "s|__TURN_SECRET__|$TURN_SECRET|g" \

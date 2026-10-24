@@ -5,7 +5,7 @@ One small box runs everything: the call server (signaling only, media goes brows
 ## 1. Server + DNS
 - Hetzner Cloud → smallest **cost-optimized x86** plan, **Ubuntu 24.04** (needs its Python 3.12), add your SSH key.
 - Point a DNS **A** record (and **AAAA** if you want IPv6) at the server's IP, e.g. `call.example.com`. Check with `dig +short call.example.com` before going on. Caddy can't get a certificate until it resolves.
-  No domain? `<ip-with-dashes>.sslip.io` (e.g. `203-0-113-7.sslip.io`) resolves to that IP and works with Let's Encrypt.
+  **No domain?** Skip DNS and use `DOMAIN=<ip-with-dashes>.sslip.io` (e.g. `203-0-113-7.sslip.io` for `203.0.113.7`). It resolves to that IP with no setup and gets a real Let's Encrypt cert. `nip.io` works the same way.
 - If you attach a **Hetzner Cloud Firewall**, open the same ports as the table below there too.
 
 ## 2. Install
@@ -15,7 +15,7 @@ apt-get update && apt-get install -y git
 git clone https://github.com/chrisdeso/rtpscope.git /opt/rtpscope   # private repo: use a deploy key or token
 cd /opt/rtpscope && DOMAIN=call.example.com deploy/setup.sh
 ```
-`setup.sh` installs the packages, builds the venv, writes `/etc/rtpscope/call.env` (STUN/TURN urls + a random TURN secret), renders the coturn, Caddy and systemd configs from this folder, opens the firewall and checks `/health`. It's safe to re-run, and the TURN secret is kept. Pass `SKIP_UFW=1` if SSH isn't on port 22 or you only use the Hetzner firewall.
+`setup.sh` installs the packages, builds the venv, writes `/etc/rtpscope/call.env` (STUN/TURN urls + a random TURN secret), renders the coturn, Caddy and systemd configs from this folder, opens the firewall and checks `/health`. It's safe to re-run: the URLs follow `DOMAIN` each time, only the TURN secret is kept. Pass `SKIP_UFW=1` if SSH isn't on port 22 or you only use the Hetzner firewall.
 
 Then open `https://call.example.com`. The first load can take ~30 s while Caddy gets the cert.
 
@@ -27,6 +27,13 @@ Open `https://call.example.com/?room=test&relay=1` on two devices. `relay=1` for
 cd /opt/rtpscope && git pull && systemctl restart rtpscope-call
 ```
 Re-run `DOMAIN=… deploy/setup.sh` if anything in `deploy/` or the dependencies changed.
+
+## Moving from sslip.io to a real domain
+Point the new domain's A record at the server, wait for `dig +short` to show the IP, then re-run with the new name:
+```sh
+cd /opt/rtpscope && DOMAIN=call.example.com deploy/setup.sh
+```
+Caddy, coturn and the STUN/TURN URLs all switch over, and the old sslip.io link stops working.
 
 ## Logs
 ```sh
