@@ -1,0 +1,57 @@
+# Deploying the call server (Hetzner VPS)
+
+One small box runs everything: the call server (signaling only, media goes browser to browser), Caddy for HTTPS, and coturn for STUN/TURN so people on strict networks can still connect.
+
+## 1. Server + DNS
+- Hetzner Cloud → smallest **cost-optimized x86** plan, **Ubuntu 24.04** (needs its Python 3.12), add your SSH key.
+- Point a DNS **A** record (and **AAAA** if you want IPv6) at the server's IP, e.g. `call.example.com`. Check with `dig +short call.example.com` before going on. Caddy can't get a certificate until it resolves.
+  No domain? `<ip-with-dashes>.sslip.io` (e.g. `203-0-113-7.sslip.io`) resolves to that IP and works with Let's Encrypt.
+- If you attach a **Hetzner Cloud Firewall**, open the same ports as the table below there too.
+
+## 2. Install
+```sh
+ssh root@<server-ip>
+apt-get update && apt-get install -y git
+git clone https://github.com/chrisdeso/rtpscope.git /opt/rtpscope   # private repo: use a deploy key or token
+cd /opt/rtpscope && DOMAIN=call.example.com deploy/setup.sh
+```
+`setup.sh` installs the packages, builds the venv, writes `/etc/rtpscope/call.env` (STUN/TURN urls + a random TURN secret), renders the coturn, Caddy and systemd configs from this folder, opens the firewall and checks `/health`. It's safe to re-run, and the TURN secret is kept. Pass `SKIP_UFW=1` if SSH isn't on port 22 or you only use the Hetzner firewall.
+
+Then open `https://call.example.com`. The first load can take ~30 s while Caddy gets the cert.
+
+## 3. Check TURN works
+Open `https://call.example.com/?room=test&relay=1` on two devices. `relay=1` forces all media through coturn, so if video shows up, TURN works. The room pill says "relay only".
+
+## Updating
+```sh
+cd /opt/rtpscope && git pull && systemctl restart rtpscope-call
+```
+Re-run `DOMAIN=… deploy/setup.sh` if anything in `deploy/` or the dependencies changed.
+
+## Logs
+```sh
+journalctl -u rtpscope-call -f   # joins / leaves
+journalctl -u coturn -f          # turn allocations, 401/403s
+journalctl -u caddy -f           # certs, proxy errors
+```
+
+## Ports
+| port | proto | what |
+|---|---|---|
+| 22 | tcp | ssh |
+| 80 | tcp | Let's Encrypt challenge + redirect to https |
+| 443 | tcp/udp | https / http3 (Caddy) |
+| 3478 | udp/tcp | STUN + TURN (coturn) |
+| 49160–49260 | udp | TURN relay ports (match `turnserver.conf`) |
+
+The call server itself only listens on `127.0.0.1:8087` behind Caddy.
+
+## Files
+| file | goes to |
+|---|---|
+| `Caddyfile` | `/etc/caddy/Caddyfile` |
+| `turnserver.conf` | `/etc/turnserver.conf` (mode 640, has the secret) |
+| `rtpscope-call.service` | `/etc/systemd/system/` |
+| generated | `/etc/rtpscope/call.env` (mode 600): `STUN_URL`, `TURN_URL`, `TURN_SECRET` |
+
+Notes: there's no auth on rooms, so anyone with the URL can join. Use non-obvious room names. Relayed calls send their media through the VPS and count against the plan's traffic.
