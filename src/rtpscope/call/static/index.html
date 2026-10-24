@@ -27,6 +27,13 @@
       <button type="submit" class="primary">Join</button>
       <p id="join-error" class="error" hidden></p>
     </form>
+
+    <!-- active meetings: polled from /rooms while the lobby is open, click one to fill the room -->
+    <section class="card meetings">
+      <h2>Active meetings <span id="meeting-count" class="pill">0</span></h2>
+      <ul id="meetings"></ul>
+      <p id="no-meetings" class="muted">No one's in a call right now. Start one on the left.</p>
+    </section>
   </main>
 
   <!-- call: one tile per person -->

@@ -194,6 +194,8 @@ function leave() {
   $("room-pill").hidden = true;
   $("mic").classList.remove("off");
   $("cam").classList.remove("off");
+  // back in the lobby --> don't wait for the next poll
+  refreshMeetings();
 }
 
 // ---- ui
@@ -249,6 +251,67 @@ function toggle(kind, button) {
   button.classList.toggle("off", !enabled);
 }
 
+// ---- active meetings --> poll /rooms while the lobby is showing
+
+const MEETINGS_INTERVAL_MS = 3000;
+
+// seconds since epoch --> "just started" / "12m" / "1h 5m"
+function since(started) {
+  const mins = Math.floor((Date.now() / 1000 - started) / 60);
+  if (!started || mins < 1) return "just started";
+  return mins < 60 ? `${mins}m` : `${Math.floor(mins / 60)}h ${mins % 60}m`;
+}
+
+function el(tag, className, text) {
+  const node = document.createElement(tag);
+  if (className) node.className = className;
+  if (text != null) node.textContent = text;
+  return node;
+}
+
+// one row per room. textContent only --> room + people names come from other users
+function meetingRow(meeting) {
+  const full = meeting.peers.length >= meeting.max;
+  const row = el("li", `meeting${full ? " full" : ""}`);
+  // long name lists get cut off, full list on hover
+  row.title = meeting.peers.join(", ");
+  const info = el("div", "info");
+  const who = el("div", "who");
+  who.append(el("span", "count", `${meeting.peers.length}/${meeting.max} · ${since(meeting.started)}`), ` · ${meeting.peers.join(", ")}`);
+  info.append(el("div", "room", meeting.room), who);
+  const button = el("button", full ? "" : "primary", full ? "Full" : "Join");
+  button.disabled = full;
+  button.onclick = () => pickMeeting(meeting.room);
+  row.append(el("span", "live"), info, button);
+  return row;
+}
+
+async function refreshMeetings() {
+  if ($("lobby").hidden) return;
+  let meetings;
+  try {
+    const res = await fetch("/rooms", { cache: "no-store" });
+    if (!res.ok) return;
+    meetings = await res.json();
+  } catch {
+    return;
+  }
+  $("meetings").replaceChildren(...meetings.map(meetingRow));
+  $("meeting-count").textContent = meetings.length;
+  $("no-meetings").hidden = meetings.length > 0;
+}
+
+// click a meeting --> join straight away if we have a name, otherwise ask for one
+function pickMeeting(room) {
+  $("room").value = room;
+  if ($("name").value.trim()) {
+    $("join-form").requestSubmit();
+  } else {
+    $("name").focus();
+    toast(`enter your name to join ${room}`);
+  }
+}
+
 // ---- wiring
 
 $("room").value = params.get("room") ?? "";
@@ -264,7 +327,8 @@ $("join-form").addEventListener("submit", async (event) => {
   try {
     localStorage.setItem("rtpscope.name", name);
   } catch {}
-  const button = event.submitter;
+  // not event.submitter, it's null when a meeting row submits the form
+  const button = $("join-form").querySelector("button[type=submit]");
   button.disabled = true;
   try {
     await join(room, name, $("pattern").checked);
@@ -288,3 +352,6 @@ $("copy").onclick = async () => {
 };
 $("leave").onclick = () => leave();
 window.addEventListener("beforeunload", () => leave());
+
+refreshMeetings();
+setInterval(refreshMeetings, MEETINGS_INTERVAL_MS);
