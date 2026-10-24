@@ -30,7 +30,7 @@ deploy/dev-turn.sh                  # coturn in docker on this machine's LAN IP,
 sudo ufw allow from 192.168.1.0/24 to any port 3478
 sudo ufw allow from 192.168.1.0/24 to any port 49160:49260 proto udp
 ```
-Run the printed command (it needs the LAN cert from `certs/README.md`), then open `https://<lan-ip>:8087` on each device. Add `&relay=1` to check TURN is really used. Stop it with `docker stop rtpscope-turn`. Unlike `turnserver.conf`, this allows relaying to private addresses, so keep it on the LAN.
+Run the printed command (it needs the LAN cert, see the main README), then open `https://<lan-ip>:8087` on each device. Add `&relay=1` to check TURN is really used. Stop it with `docker stop rtpscope-turn`. Unlike `turnserver.conf`, this allows relaying to private addresses, so keep it on the LAN.
 
 ## Updating
 ```sh

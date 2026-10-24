@@ -16,12 +16,12 @@ htmlcov/
 !.env.example
 !*.env.example
 
-# tls certs for lan https --> generate them, see certs/README.md
+# tls certs for lan https --> generate them, see the readme
 *.pem
 *.key
 *.crt
 certs/*
-!certs/README.md
+!certs/.gitkeep
 
 # experiment output (captures, recordings, runs)
 runs/
